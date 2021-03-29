@@ -1,0 +1,1 @@
+import serial as ps # załaduj pyserial
