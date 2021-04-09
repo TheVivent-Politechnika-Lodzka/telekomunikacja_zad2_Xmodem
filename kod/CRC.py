@@ -8,7 +8,7 @@ def calc_crc(data : bytes):
         crc ^= data[i] << 8
         for j in range(0, 8):
             if (crc & 0x8000) > 0:
-                crc =(crc << 1) ^ 0x1021
+                crc = (crc << 1) ^ 0x1021
             else:
                 crc = crc << 1
     return crc & 0xFFFF
