@@ -1,6 +1,9 @@
-import CRC
+from time import time
+import checksum as ch
 from control_chars import *
+from packet import XPacket
 import serial as ps
+import serial.tools.list_ports as lp
 
 # gdzie zapisać plik
 outFile = open(input("Podaj jak zapisać odbierany plik: "), 'wb')
@@ -8,31 +11,74 @@ outFile = open(input("Podaj jak zapisać odbierany plik: "), 'wb')
 # wybranie rodzaju sumy kontrolnej
 control_sum = None
 bytes_to_read = 132 # default jako suma kontrolna
-print("1. Suma kontrolna")
+print("1. Suma algebraiczna")
 print("2. CRC")
 print("Cokolwiek. Wyjscie z programu")
 choice = input("Wybierz sposób potwierdzenia transmisji: ")
 if choice == "1":
-    control_sum = CRC.calc_crc
+    control_sum = ch.sum
     C = NAK
 elif choice == "2":
-    control_sum = CRC.calc_crc
+    control_sum = ch.crc
     bytes_to_read += 1 # CRC potrzebuje dodatkowego bajtu
 else: exit()
 
-print("Otwieram połączenie na COM1")
-conn = ps.Serial("COM1", timeout=3)
+# wylistowanie dostępnych portów
+ports = sorted(lp.comports())
+res_ports = []
+print("Dostępne porty:")
+i=0
+for port, desc, hwid in ports:
+    res_ports.append(port)
+    print(str(i) + ". " + port)
+    i += 1
+if len(res_ports) == 0: exit("Brak dostępnych portów")
+choosen_port = res_ports[int(input("Wybierz: "))]
+
+print("Otwieram połączenie na " + choosen_port)
+conn = ps.Serial(choosen_port, timeout=3, inter_byte_timeout=1) # inter_byte_timeout=1 <- odpowiada za poprawne działanie, nowe komputery są za szybkie
+conn.flush()
 
 # zainicjuj połączenie
-buffer = b''
-while len(buffer) == 0:
+buffer = XPacket()
+while len(buffer.getData()) == 0:
+    # wysłanie C <- zainicjiowanie odbioru z sumą kontrolną CRC
     conn.write(C)
-    buffer = conn.read(bytes_to_read)
+    tmp = conn.read(bytes_to_read)
+    if len(tmp) > 0: buffer.newPacket(tmp)
 
+print("Połączenie ustanowione. Odbieram dane")
 
-# print(buffer[bytes_to_read-2].to_bytes(1, "big"))
-# print(buffer[bytes_to_read-1].to_bytes(1, "big"))
-# print(int.from_bytes(buffer[bytes_to_read-2].to_bytes(1, "big") + buffer[bytes_to_read-1].to_bytes(1, "big"), "big"))
+while buffer.getStart() != EOT:
+    if not buffer.checkChecksum(control_sum):
+        # wysłanie znaku sterującego NAK, proźba ponownego wysłania
+        conn.write(NAK)
+        # ponowne odczytanie pakietu
+        tmp = conn.read(bytes_to_read)
+        # jeżeli odebrany pakiet ma właściwą długość jest przekazywany dalej
+        if len(tmp) == bytes_to_read: buffer.newPacket(tmp)
+        continue
+    # zapis widomości do pliku
+    outFile.write(buffer.getData())
+    # czyszczenie buforu
+    conn.flush()
+    # Wysłanie ACK <- potwierdzenie poprawnego odebrania pakietu
+    conn.write(ACK)
 
-print("coś odbieram")
-print(buffer)
+    i = 0
+    for i in range(20):
+        # zapis otrzymanego pakietu
+        tmp = conn.read(bytes_to_read)
+        if len(tmp) > 0:
+            # jeżeli długość jest większa od 0 to przekazuje otrzymany pakiet dalej
+            buffer.newPacket(tmp)
+            break
+    # jeżeli przez minutę nie uda się otrzymać wiadomości, to zwróć błąd
+    if i == 19: 
+        conn.write(CAN)
+        exit("Timeout")
+    
+# zakończenie połączenia (otrzymano EOT)
+conn.write(ACK)
+
+print("Połączenie zakończone. Plik odebrany")

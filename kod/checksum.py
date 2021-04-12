@@ -1,4 +1,4 @@
-def calc_crc(data : bytes):
+def crc(data : bytes):
     # funkcja generująca nagłówek CRC
     # zmiana na tablicę bajtową
     data = bytearray(data)
@@ -15,7 +15,7 @@ def calc_crc(data : bytes):
 def sum(data : bytes):
     # funkcja generująca sumę algebraiczną
     data = bytearray(data)
-    result = 0x0000
+    result = 0
     for byte in data:
         result += byte
         result %= 256
