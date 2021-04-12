@@ -1,20 +1,20 @@
-SOH = 0x01
+SOH = b'\x01'
 '''Start of Header'''
 
-EOT = 0x04
+EOT = b'\x04'
 '''End of Transmission'''
 
-ACK = 0x06
+ACK = b'\x06'
 '''Acknowledge'''
 
-NAK = 0x15
+NAK = b'\x15'
 '''Not Acknowledge'''
 
-ETB = 0x17
+ETB = b'\x17'
 '''End of Transmission Block (Return to Amulet OS mode)'''
 
-CAN = 0x18
+CAN = b'\x18'
 '''Cancel (Force receiver to start sending C's)'''
 
-C   = 0x43
+C   = b'\x43'
 '''ASCII C (CRC?)'''
