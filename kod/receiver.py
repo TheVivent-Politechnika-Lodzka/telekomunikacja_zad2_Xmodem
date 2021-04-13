@@ -1,7 +1,6 @@
-from time import time
 import checksum as ch
 from control_chars import *
-from packet import XPacket
+from packet import XPacketReceiver
 import serial as ps
 import serial.tools.list_ports as lp
 
@@ -40,7 +39,7 @@ conn = ps.Serial(choosen_port, timeout=3, inter_byte_timeout=1) # inter_byte_tim
 conn.flush()
 
 # zainicjuj połączenie
-buffer = XPacket()
+buffer = XPacketReceiver()
 while len(buffer.getData()) == 0:
     # wysłanie C <- zainicjiowanie odbioru z sumą kontrolną CRC
     conn.write(C)

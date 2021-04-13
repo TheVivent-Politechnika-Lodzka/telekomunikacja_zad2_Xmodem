@@ -14,7 +14,7 @@ class FileLoader:
         # uzupełnienie do 128
         while len(self.current) < 128:
             # uzupełnianie pustym znakiem null
-            self.current += b'\x00' * 8 
+            self.current += b'\x00'
             # ustawienie flagi końca pliku
             self.EOF = True
         return self.current

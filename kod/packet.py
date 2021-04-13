@@ -1,6 +1,44 @@
 from control_chars import *
 
-class XPacket:
+class XPacketSender:
+
+    method                  = None
+    start                   = SOH
+    packet_number           = 0
+    packet_number_reversed  = 255
+    data                    = b''
+    checksum                = b''
+
+    def __init__(self, method):
+        # zapisanie metody obliczania sumy kontrolnej
+        self.method = method
+
+    def sendPacket(self, data=None):
+        # jeżeli podano dane, to zaaktualizuj klasę
+        # jeżeli nie, to wyślij to samo co wcześniej
+        if data != None:
+            self.__iteratePacketNumber()
+            self.data = data
+            self.checksum = self.method(self.data)
+
+        # połącz dane i wyślij
+        return self.start\
+            + self.packet_number.to_bytes(1, "big")\
+            + self.packet_number_reversed.to_bytes(1, "big")\
+            + self.data\
+            + self.checksum
+
+    def __iteratePacketNumber(self):
+        # ziteruj numer pakietu
+        self.packet_number          += 1
+        self.packet_number_reversed -= 1
+        # jeżeli przekracza zakres, to napraw
+        if self.packet_number > 255:
+            self.packet_number = 0
+        if self.packet_number_reversed < 0:
+            self.packet_number_reversed = 255
+
+class XPacketReceiver:
 
     start                   = SOH
     packet_number           = 0
@@ -46,6 +84,4 @@ class XPacket:
         # przeliczenie sumy kontrolnej danych i porównanie
         # z sumą otrzymaną w pakiecie
         # metodą podaną przez użytkownika (suma algb lub crc)
-        sum_length = 1
-        if len(self.checksum) == 2: sum_length = 2
-        return method(self.data).to_bytes(sum_length, "big") == self.checksum
+        return method(self.data) == self.checksum
